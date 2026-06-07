@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.ipynb_checkpoints/
+
+# PyTorch / Lightning
+lightning_logs/
+*.ckpt
+*.pt
+*.pth
+
+# Datasets / embeddings caches
+.cache/
+.huggingface/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
