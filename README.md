@@ -1,60 +1,49 @@
 # nlp2025-homework
 
-Домашние работы по курсу [tam2511/nlp2025](https://github.com/tam2511/nlp2025).
-
-## Структура
-
-```
-lesson2/homeworks/agnews_homework.ipynb   — классификация AG News (цель: Macro F1 ≥ 0.95)
-```
+Домашка по курсу [tam2511/nlp2025](https://github.com/tam2511/nlp2025).
 
 ## lesson2 — Классификация AG News
 
-**Задание**: достичь Macro F1 ≥ 0.95 на тесте AG News (одна модель, без ансамблей).
+Цель — Macro F1 ≥ 0.95 на тесте.
 
-**Подход**: гибрид CNN + BiLSTM + self-attention с предобученными Word2Vec эмбеддингами.
+Сделал два ноутбука, чтобы было видно прогрессию:
 
-**Архитектура**:
-- Embedding — pretrained `word2vec-google-news-300` (trainable, padding_idx=0)
-- Spatial dropout по каналам эмбеддингов + word dropout
-- Параллельные Conv1d с ядрами {2, 3, 4, 5}, по 128 фильтров → ReLU → masked max-over-time pooling
-- BiLSTM(hidden=128, 1 слой, bidirectional) c `pack_padded_sequence` → additive self-attention pooling по маске
-- Concat(CNN, attn) → BatchNorm → Dropout → Linear(256) → ReLU → Dropout → Linear(4)
+| Ноутбук | Модель | Test Macro F1 | Test Accuracy |
+|---|---|---|---|
+| [`agnews_textcnn.ipynb`](lesson2/homeworks/agnews_textcnn.ipynb) | TextCNN (kernels=2,3,4,5) + GloVe-100 | **0.9262** | 0.9263 |
+| [`agnews_hybrid.ipynb`](lesson2/homeworks/agnews_hybrid.ipynb) | TextCNN + BiLSTM(hidden=64) + GloVe-100 | **0.9312** | 0.9313 |
 
-**Обучение**:
-- AdamW (lr=1e-3, weight_decay=1e-5) + CosineAnnealingLR
-- CrossEntropyLoss с label_smoothing=0.1
-- Gradient clipping = 1.0
-- ModelCheckpoint по `val_f1`, EarlyStopping(patience=4)
-- 12 эпох, batch_size=128, train/val 90/10 (стратифицированно)
+Оба прогонялись локально на CPU (без GPU). В ноутбуках уже встроены выводы — графики обучения, classification report, confusion matrix и разбор ошибок.
 
-**Отчёт в ноутбуке**:
-- Графики train/val loss, accuracy, Macro F1 по эпохам
-- Classification report
-- Confusion matrix (raw + normalized)
-- Анализ ошибок (10 примеров)
+**Что использовал из семинара**:
+- структура TextCNN (kernels 3/4/5) — из `textcnn_agnews.ipynb`
+- masked max-pool для BiLSTM — из `bilstm_agnews.ipynb`
+- загрузка предобученных эмбеддингов через `gensim.downloader` — из `bilstm_word2vec.ipynb`
+
+**Что добавил поверх семинара**:
+- kernel=2 в CNN (помог немного)
+- BiLSTM поверх тех же эмбеддингов, склейка с CNN-фичами
+- AdamW + CosineAnnealingLR
+- label smoothing 0.1
+- BatchNorm перед классификатором
+- gradient clipping 1.0
+- токен `<num>` для чисел (улучшил покрытие словаря)
+
+**Честно о результате**: на CPU за разумное время получилось дойти до 0.93 — это +1.5 п.п. к baseline TextCNN из семинара. Чтобы добраться до 0.95, по идее нужно одно из:
+- GPU и 10–12 эпох (вместо 6)
+- эмбеддинги побольше (GloVe-300 или word2vec-google-news-300 — 1.6 ГБ)
+- EDA-аугментация (synonym replacement / random swap)
+- замена back-end на transformer (BERT-base уверенно даёт 0.95+)
 
 ## Как запустить
 
 ```bash
-# зависимости
-pip install torch pytorch-lightning torchmetrics datasets gensim scikit-learn matplotlib seaborn
+pip install torch pytorch-lightning torchmetrics datasets gensim scikit-learn matplotlib seaborn jupyter
 
-# запустить ноутбук
-jupyter notebook lesson2/homeworks/agnews_homework.ipynb
+# или одной командой:
+pip install -r requirements.txt
+
+jupyter notebook lesson2/homeworks/
 ```
 
-В ячейке `## Шаг 0: Конфигурация` есть флаг `SMOKE_TEST`:
-- `SMOKE_TEST = True` — быстрый прогон на 2000 примерах / 1 эпоха (для проверки на CPU)
-- `SMOKE_TEST = False` — полное обучение (нужен GPU; ~10–15 мин на эпоху на T4/L40)
-
-При желании можно заменить `EMBEDDING_NAME = 'word2vec-google-news-300'` (1.6 GB) на
-`'glove-wiki-gigaword-300'` (~370 MB) или `'fasttext-wiki-news-subwords-300'`.
-
-## Использованные материалы лекции
-
-Семинарские ноутбуки [tam2511/nlp2025/lesson2/seminar](https://github.com/tam2511/nlp2025/tree/main/lesson2/seminar):
-
-- `bilstm_agnews.ipynb` — структура Lightning-модуля, masked max-pooling
-- `textcnn_agnews.ipynb` — TextCNN, токенизация и vocab
-- `bilstm_word2vec.ipynb` — загрузка предобученных Word2Vec эмбеддингов
+Зависимости перечислены в [requirements.txt](requirements.txt).

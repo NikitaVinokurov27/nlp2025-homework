@@ -1,0 +1,10 @@
+torch>=2.0
+numpy<2
+scikit-learn>=1.0
+matplotlib>=3.5
+seaborn>=0.12
+gensim>=4.4
+datasets>=2.0
+jupyter
+ipykernel
+nbconvert
